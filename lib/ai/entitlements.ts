@@ -11,16 +11,16 @@ export const entitlementsByUserType: Record<UserType, Entitlements> = {
    * For users without an account
    */
   guest: {
-    maxMessagesPerDay: 20,
-    availableChatModelIds: ['chat-model', 'chat-model-reasoning'],
+    maxMessagesPerDay: 10, // 元の20から減らす
+    availableChatModelIds: ['chat-model'], // reasoningモデルを無効化
   },
 
   /*
    * For users with an account
    */
   regular: {
-    maxMessagesPerDay: 100,
-    availableChatModelIds: ['chat-model', 'chat-model-reasoning'],
+    maxMessagesPerDay: 50, // 元の100から減らす
+    availableChatModelIds: ['chat-model'], // reasoningモデルを無効化
   },
 
   /*

@@ -2,6 +2,7 @@ import {
   customProvider,
   extractReasoningMiddleware,
   wrapLanguageModel,
+  openai,
 } from 'ai';
 import { xai } from '@ai-sdk/xai';
 import { isTestEnvironment } from '../constants';
@@ -23,15 +24,15 @@ export const myProvider = isTestEnvironment
     })
   : customProvider({
       languageModels: {
-        'chat-model': xai('grok-2-vision-1212'),
+        'chat-model': openai('gpt-3.5-turbo'),
         'chat-model-reasoning': wrapLanguageModel({
-          model: xai('grok-3-mini-beta'),
+          model: openai('gpt-3.5-turbo'), // gpt-4から変更
           middleware: extractReasoningMiddleware({ tagName: 'think' }),
         }),
-        'title-model': xai('grok-2-1212'),
-        'artifact-model': xai('grok-2-1212'),
+        'title-model': openai('gpt-3.5-turbo'),
+        'artifact-model': openai('gpt-3.5-turbo'),
       },
       imageModels: {
-        'small-model': xai.image('grok-2-image'),
+        'small-model': openai.image('dall-e-3'),
       },
     });
