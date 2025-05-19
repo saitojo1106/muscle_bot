@@ -4,7 +4,7 @@ import {
   wrapLanguageModel,
 } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { xai } from '@ai-sdk/xai';
+import { groq } from '@ai-sdk/groq'; // または適切なインポート
 import { isTestEnvironment } from '../constants';
 import {
   artifactModel,
@@ -24,17 +24,16 @@ export const myProvider = isTestEnvironment
     })
   : customProvider({
       languageModels: {
-        // Groq(XAI)をデフォルトチャットモデルとして使用
-        'chat-model': xai('llama3-70b-8192'),
+        // Groq（以前のXAI）をデフォルトチャットモデルとして使用
+        'chat-model': groq('llama3-70b-8192'),
         'chat-model-reasoning': wrapLanguageModel({
-          // Groq(XAI)をレゾニングモデルとしても使用
-          model: xai('llama3-70b-8192'),
+          model: groq('llama3-70b-8192'),
           middleware: extractReasoningMiddleware({ tagName: 'think' }),
         }),
-        'title-model': xai('llama3-70b-8192'),
-        'artifact-model': xai('llama3-70b-8192'),
+        'title-model': groq('llama3-70b-8192'),
+        'artifact-model': groq('llama3-70b-8192'),
       },
       imageModels: {
-        'small-model': openai.image('dall-e-3'), // 画像生成はOpenAIのまま
+        'small-model': openai.image('dall-e-3'),
       },
     });
