@@ -230,6 +230,7 @@ export async function POST(request: Request) {
   }
 }
 
+// GETメソッドを修正
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const chatId = searchParams.get('chatId');
@@ -276,11 +277,17 @@ export async function GET(request: Request) {
     execute: () => {},
   });
 
+  // Redis接続がない場合は通常のストリームを返す
+  if (!streamContext) {
+    return new Response(emptyDataStream);
+  }
+
+  // Redis接続がある場合は履歴付きストリームを返す
   return new Response(
     await streamContext.resumableStream(recentStreamId, () => emptyDataStream),
     {
       status: 200,
-    },
+    }
   );
 }
 
