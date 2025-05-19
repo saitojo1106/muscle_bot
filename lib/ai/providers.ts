@@ -2,8 +2,8 @@ import {
   customProvider,
   extractReasoningMiddleware,
   wrapLanguageModel,
-  openai,
 } from 'ai';
+import { openai } from '@ai-sdk/openai';
 import { xai } from '@ai-sdk/xai';
 import { isTestEnvironment } from '../constants';
 import {
@@ -24,15 +24,17 @@ export const myProvider = isTestEnvironment
     })
   : customProvider({
       languageModels: {
-        'chat-model': openai('gpt-3.5-turbo'),
+        // Groq(XAI)をデフォルトチャットモデルとして使用
+        'chat-model': xai('llama3-70b-8192'),
         'chat-model-reasoning': wrapLanguageModel({
-          model: openai('gpt-3.5-turbo'), // gpt-4から変更
+          // Groq(XAI)をレゾニングモデルとしても使用
+          model: xai('llama3-70b-8192'),
           middleware: extractReasoningMiddleware({ tagName: 'think' }),
         }),
-        'title-model': openai('gpt-3.5-turbo'),
-        'artifact-model': openai('gpt-3.5-turbo'),
+        'title-model': xai('llama3-70b-8192'),
+        'artifact-model': xai('llama3-70b-8192'),
       },
       imageModels: {
-        'small-model': openai.image('dall-e-3'),
+        'small-model': openai.image('dall-e-3'), // 画像生成はOpenAIのまま
       },
     });
