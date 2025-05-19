@@ -34,9 +34,15 @@ import type { Chat } from '@/lib/db/schema';
 
 export const maxDuration = 60;
 
-const streamContext = createResumableStreamContext({
-  waitUntil: after,
-});
+// try-catchでResumableStreamContextを生成
+let streamContext;
+try {
+  streamContext = createResumableStreamContext({
+    waitUntil: after,
+  });
+} catch (error) {
+  console.error('Failed to create resumable stream context:', error);
+}
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
@@ -206,6 +212,12 @@ export async function POST(request: Request) {
       },
     });
 
+    // Redis接続がない場合は通常のストリームを返す
+    if (!streamContext) {
+      return new Response(stream);
+    }
+
+    // Redis接続がある場合は履歴付きストリームを返す
     return new Response(
       await streamContext.resumableStream(streamId, () => stream),
     );
@@ -297,7 +309,7 @@ export async function DELETE(request: Request) {
   } catch (error) {
     console.error(error);
     return new Response('An error occurred while processing your request!', {
-      status: 500,
-    });
+      status: 500 },
+    );
   }
 }
