@@ -29,20 +29,20 @@ export function ModelSelector({
   const [optimisticModelId, setOptimisticModelId] =
     useOptimistic(selectedModelId);
 
-  const userType = session.user.type;
+  const userType = session?.user?.type || 'free';
   const { availableChatModelIds } = entitlementsByUserType[userType];
 
   const availableChatModels = chatModels.filter((chatModel) =>
     availableChatModelIds.includes(chatModel.id),
   );
 
-  const selectedChatModel = useMemo(
-    () =>
-      availableChatModels.find(
-        (chatModel) => chatModel.id === optimisticModelId,
-      ),
-    [optimisticModelId, availableChatModels],
-  );
+  // デフォルトモデル名を固定
+  const modelName = useMemo(() => {
+    const model = availableChatModels.find(
+      (chatModel) => chatModel.id === optimisticModelId
+    );
+    return model?.name || "Chat model"; // デフォルト値を明示
+  }, [optimisticModelId, availableChatModels]);
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -58,7 +58,7 @@ export function ModelSelector({
           variant="outline"
           className="md:px-2 md:h-[34px]"
         >
-          {selectedChatModel?.name}
+          {modelName}
           <ChevronDownIcon />
         </Button>
       </DropdownMenuTrigger>
