@@ -28,20 +28,21 @@ import { myProvider } from '@/lib/ai/providers';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
 import { geolocation } from '@vercel/functions';
-import { createResumableStreamContext } from 'resumable-stream';
+import { createResumableStreamContext, type ResumableStreamContext } from 'resumable-stream';
 import { after } from 'next/server';
 import type { Chat } from '@/lib/db/schema';
 
 export const maxDuration = 60;
 
-// try-catchでResumableStreamContextを生成
-let streamContext;
+// streamContextに型を明示的に定義
+let streamContext: ResumableStreamContext | undefined;
 try {
   streamContext = createResumableStreamContext({
     waitUntil: after,
   });
 } catch (error) {
   console.error('Failed to create resumable stream context:', error);
+  // streamContextはundefinedのまま
 }
 
 export async function POST(request: Request) {
@@ -221,7 +222,8 @@ export async function POST(request: Request) {
     return new Response(
       await streamContext.resumableStream(streamId, () => stream),
     );
-  } catch (_) {
+  } catch (error) {
+    console.error('Chat API error:', error);
     return new Response('An error occurred while processing your request!', {
       status: 500,
     });
