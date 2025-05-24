@@ -8,6 +8,18 @@ const components: Partial<Components> = {
   // @ts-expect-error
   code: CodeBlock,
   pre: ({ children }) => <>{children}</>,
+  p: ({ node, children, ...props }) => {
+    // 子要素にpre要素が含まれている場合はdivを使用
+    const hasPreElement = node?.children?.some(
+      (child: any) => child.type === 'element' && child.tagName === 'pre',
+    );
+
+    if (hasPreElement) {
+      return <div {...props}>{children}</div>;
+    }
+
+    return <p {...props}>{children}</p>;
+  },
   ol: ({ node, children, ...props }) => {
     return (
       <ol className="list-decimal list-outside ml-4" {...props}>
@@ -24,7 +36,7 @@ const components: Partial<Components> = {
   },
   ul: ({ node, children, ...props }) => {
     return (
-      <ul className="list-decimal list-outside ml-4" {...props}>
+      <ul className="list-disc list-outside ml-4" {...props}>
         {children}
       </ul>
     );
