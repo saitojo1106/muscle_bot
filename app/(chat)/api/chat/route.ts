@@ -28,10 +28,14 @@ import { myProvider } from '@/lib/ai/providers';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
 import { geolocation } from '@vercel/functions';
-import { createResumableStreamContext, type ResumableStreamContext } from 'resumable-stream';
+import {
+  createResumableStreamContext,
+  type ResumableStreamContext,
+} from 'resumable-stream';
 import { after } from 'next/server';
 import type { Chat } from '@/lib/db/schema';
 
+export const runtime = 'nodejs'; // Edge Runtimeから変更
 export const maxDuration = 60;
 
 // streamContextに型を明示的に定義
@@ -46,20 +50,22 @@ try {
 }
 
 export async function POST(request: Request) {
+  console.log('POST /api/chat - Start');
+
   let requestBody: PostRequestBody;
 
   try {
     const json = await request.json();
-    requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
-    return new Response('Invalid request body', { status: 400 });
-  }
+    console.log('Request body parsed successfully');
 
-  try {
+    requestBody = postRequestBodySchema.parse(json);
+    console.log('Request body validated successfully');
+
     const { id, message, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
     const session = await auth();
+    console.log('Session:', session ? 'Found' : 'Not found');
 
     if (!session?.user) {
       return new Response('Unauthorized', { status: 401 });
@@ -223,10 +229,8 @@ export async function POST(request: Request) {
       await streamContext.resumableStream(streamId, () => stream),
     );
   } catch (error) {
-    console.error('Chat API error:', error);
-    return new Response('An error occurred while processing your request!', {
-      status: 500,
-    });
+    console.error('POST /api/chat error:', error);
+    return new Response('Internal Server Error', { status: 500 });
   }
 }
 
@@ -287,7 +291,7 @@ export async function GET(request: Request) {
     await streamContext.resumableStream(recentStreamId, () => emptyDataStream),
     {
       status: 200,
-    }
+    },
   );
 }
 
@@ -318,7 +322,7 @@ export async function DELETE(request: Request) {
   } catch (error) {
     console.error(error);
     return new Response('An error occurred while processing your request!', {
-      status: 500 },
-    );
+      status: 500,
+    });
   }
 }
