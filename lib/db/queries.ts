@@ -27,6 +27,7 @@ import {
   type DBMessage,
   type Chat,
   stream,
+  userProfiles,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
@@ -506,6 +507,49 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     return streamIds.map(({ id }) => id);
   } catch (error) {
     console.error('Failed to get stream ids by chat id from database');
+    throw error;
+  }
+}
+
+export async function getUserProfile(
+  userId: string,
+): Promise<UserProfile | null> {
+  try {
+    const [profile] = await db
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    return profile || null;
+  } catch (error) {
+    console.error('Failed to get user profile:', error);
+    throw error;
+  }
+}
+
+export async function saveUserProfile(
+  profile: Partial<NewUserProfile> & { userId: string },
+) {
+  try {
+    const existing = await getUserProfile(profile.userId);
+
+    if (existing) {
+      return await db
+        .update(userProfiles)
+        .set({ ...profile, updatedAt: new Date() })
+        .where(eq(userProfiles.userId, profile.userId))
+        .returning();
+    } else {
+      return await db
+        .insert(userProfiles)
+        .values({
+          ...profile,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+    }
+  } catch (error) {
+    console.error('Failed to save user profile:', error);
     throw error;
   }
 }
