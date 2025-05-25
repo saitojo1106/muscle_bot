@@ -38,7 +38,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               className="flex flex-row gap-3 items-center"
             >
               <span className="text-lg font-semibold px-2 hover:bg-muted rounded-md cursor-pointer">
-                Chatbot
+                筋トレBot
               </span>
             </Link>
             <Tooltip>
@@ -61,20 +61,30 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           </div>
         </SidebarMenu>
       </SidebarHeader>
+
       <SidebarContent>
         <SidebarHistory user={user} />
       </SidebarContent>
-      <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton asChild>
-            <Link href="/profile">
-              <UserIcon />
-              <span>プロフィール設定</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
+
+      <SidebarFooter>
+        {user && user.type !== 'guest' ? (
+          <>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/profile">
+                    <UserIcon />
+                    <span>プロフィール設定</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+            <SidebarUserNav user={user} />
+          </>
+        ) : (
+          <SidebarUserNav user={user} />
+        )}
+      </SidebarFooter>
     </Sidebar>
   );
 }

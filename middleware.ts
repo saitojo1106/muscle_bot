@@ -1,19 +1,32 @@
-import { NextResponse, type NextRequest } from 'next/server';
 import { auth } from '@/app/(auth)/auth';
+import { type NextRequest, NextResponse } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   const session = await auth();
   const { pathname } = request.nextUrl;
 
-  // ログインしていない場合にアクセス制限されるページのリスト
-  if (!session?.user && pathname !== '/login' && pathname !== '/register' && !pathname.startsWith('/api/auth')) {
-    // /loginにリダイレクトするのではなく、ゲスト認証を試みる
+  // 認証不要のパス
+  if (
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register')
+  ) {
+    return NextResponse.next();
+  }
+
+  // 認証済みユーザーがログイン/登録ページにアクセスした場合
+  if (session?.user && (pathname === '/login' || pathname === '/register')) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // 未認証ユーザーがトップページにアクセスした場合は自動ゲスト認証
+  if (!session?.user && pathname === '/') {
     return NextResponse.redirect(new URL('/api/auth/guest', request.url));
   }
 
-  // ログイン済みユーザーがログインページやサインアップページにアクセスしようとした場合
-  if (session?.user && (pathname === '/login' || pathname === '/register')) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // その他の保護されたページへのアクセス
+  if (!session?.user) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   return NextResponse.next();
@@ -21,11 +34,13 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/',
-    '/chat/:id',
-    '/api/:path*',
-    '/login',
-    '/register',
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (public folder)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
