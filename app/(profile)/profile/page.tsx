@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/toast';
 
 interface ProfileData {
@@ -130,7 +129,7 @@ export default function ProfilePage() {
                 onChange={(e) =>
                   setProfile((prev) => ({
                     ...prev,
-                    age: parseInt(e.target.value),
+                    age: Number.parseInt(e.target.value),
                   }))
                 }
                 placeholder="歳"
@@ -146,7 +145,7 @@ export default function ProfilePage() {
                 onChange={(e) =>
                   setProfile((prev) => ({
                     ...prev,
-                    height: parseInt(e.target.value),
+                    height: Number.parseInt(e.target.value),
                   }))
                 }
                 placeholder="cm"
@@ -163,7 +162,7 @@ export default function ProfilePage() {
                 onChange={(e) =>
                   setProfile((prev) => ({
                     ...prev,
-                    weight: parseFloat(e.target.value),
+                    weight: Number.parseFloat(e.target.value),
                   }))
                 }
                 placeholder="kg"
@@ -204,7 +203,7 @@ export default function ProfilePage() {
               onChange={(e) =>
                 setProfile((prev) => ({
                   ...prev,
-                  trainingFrequency: parseInt(e.target.value),
+                  trainingFrequency: Number.parseInt(e.target.value),
                 }))
               }
               placeholder="回/週"
@@ -263,7 +262,7 @@ export default function ProfilePage() {
                 onChange={(e) =>
                   setProfile((prev) => ({
                     ...prev,
-                    dailyCalories: parseInt(e.target.value),
+                    dailyCalories: Number.parseInt(e.target.value),
                   }))
                 }
                 placeholder="kcal/日"
@@ -280,7 +279,7 @@ export default function ProfilePage() {
                 onChange={(e) =>
                   setProfile((prev) => ({
                     ...prev,
-                    proteinGoal: parseFloat(e.target.value),
+                    proteinGoal: Number.parseFloat(e.target.value),
                   }))
                 }
                 placeholder="g/日"

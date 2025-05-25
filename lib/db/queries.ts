@@ -28,6 +28,8 @@ import {
   type Chat,
   stream,
   userProfiles,
+  type UserProfile,
+  type NewUserProfile,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';

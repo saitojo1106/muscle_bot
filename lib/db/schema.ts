@@ -203,5 +203,5 @@ export const userProfiles = pgTable('user_profiles', {
   updatedAt: timestamp('updated_at').notNull(),
 });
 
-export type UserProfile = typeof userProfiles.$inferSelect;
+export type UserProfile = InferSelectModel<typeof userProfiles>;
 export type NewUserProfile = typeof userProfiles.$inferInsert;

@@ -13,10 +13,13 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { UserIcon } from 'lucide-react';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
@@ -62,6 +65,16 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         <SidebarHistory user={user} />
       </SidebarContent>
       <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild>
+            <Link href="/profile">
+              <UserIcon />
+              <span>プロフィール設定</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
     </Sidebar>
   );
 }
