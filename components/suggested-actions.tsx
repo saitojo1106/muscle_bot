@@ -139,6 +139,35 @@ const getUserLevel = (): UserLevel => {
   return 'unknown';
 };
 
+// プロフィール情報を考慮した質問生成
+const getPersonalizedActions = (userLevel: UserLevel, userProfile?: any) => {
+  const baseActions = getSuggestedActions(userLevel);
+
+  if (!userProfile) return baseActions;
+
+  // プロフィール情報に基づいてパーソナライズした質問を追加
+  const personalizedActions = [...baseActions];
+
+  if (userProfile.gender === 'female') {
+    personalizedActions.push({
+      title: '女性向けトレーニング',
+      label: 'ホルモンバランスを考慮したトレーニングプラン',
+      action: `${userProfile.age}歳女性です。生理周期やホルモンバランスを考慮したトレーニングプランを教えてください。`,
+    });
+  }
+
+  if (userProfile.occupation === 'student') {
+    personalizedActions.push({
+      title: '学生向けプラン',
+      label: '限られた時間と予算での効率的なトレーニング',
+      action:
+        '学生で時間と予算が限られています。効率的な筋トレプランを教えてください。',
+    });
+  }
+
+  return personalizedActions.slice(0, 4); // 4つまでに制限
+};
+
 function PureSuggestedActions({
   chatId,
   append,
