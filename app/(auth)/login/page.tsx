@@ -4,41 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useState } from 'react';
 import { toast } from '@/components/toast';
+import { useSession } from 'next-auth/react';
 
 import { AuthForm } from '@/components/auth-form';
 import { SubmitButton } from '@/components/submit-button';
-
 import { login, type LoginActionState } from '../actions';
-import { useSession } from 'next-auth/react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ArrowLeft, X } from 'lucide-react';
-import { useEffect } from 'react';
-
-interface ProfileData {
-  gender?: string;
-  occupation?: string;
-  age?: number;
-  height?: number;
-  weight?: number;
-  fitnessLevel?: string;
-  goals?: string[];
-  trainingFrequency?: number;
-  preferredTrainingTime?: string;
-  dietaryRestrictions?: string;
-  dailyCalories?: number;
-  proteinGoal?: number;
-  currentHabits?: string[];
-}
 
 export default function Page() {
   const router = useRouter();

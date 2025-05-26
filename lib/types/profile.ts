@@ -1,7 +1,5 @@
-// lib/types/profile.ts として新規作成
-export interface UserProfile {
-  id: string;
-  userId: string;
+// lib/types/profile.ts
+export interface ProfileData {
   gender?: 'male' | 'female' | 'other';
   occupation?: 'student' | 'office_worker' | 'other';
   age?: number;
@@ -15,6 +13,4 @@ export interface UserProfile {
   dailyCalories?: number;
   proteinGoal?: number;
   currentHabits?: string[];
-  createdAt: Date;
-  updatedAt: Date;
 }

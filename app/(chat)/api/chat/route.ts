@@ -16,11 +16,10 @@ import {
   getStreamIdsByChatId,
   saveChat,
   saveMessages,
+  getUserProfile,
 } from '@/lib/db/queries';
 import { generateUUID, getTrailingMessageId } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '../../actions';
-import { createDocument } from '@/lib/ai/tools/create-document';
-import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 import { isProductionEnvironment } from '@/lib/constants';
@@ -34,11 +33,11 @@ import {
 } from 'resumable-stream';
 import { after } from 'next/server';
 import type { Chat } from '@/lib/db/schema';
+import { generatePersonalizedPrompt } from '@/lib/ai/prompts/fitness';
 
-export const runtime = 'nodejs'; // Edge Runtimeから変更
+export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-// streamContextに型を明示的に定義
 let streamContext: ResumableStreamContext | undefined;
 try {
   streamContext = createResumableStreamContext({
@@ -46,7 +45,6 @@ try {
   });
 } catch (error) {
   console.error('Failed to create resumable stream context:', error);
-  // streamContextはundefinedのまま
 }
 
 export async function POST(request: Request) {
@@ -149,28 +147,16 @@ export async function POST(request: Request) {
       execute: (dataStream) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: personalizedSystemPrompt,
+          system: personalizedSystemPrompt, // 筋トレ特化プロンプト使用
           messages,
           maxSteps: 5,
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
               ? []
-              : [
-                  'getWeather',
-                  'createDocument',
-                  'updateDocument',
-                  'requestSuggestions',
-                ],
-          experimental_transform: smoothStream({ chunking: 'word' }),
-          experimental_generateMessageId: generateUUID,
+              : ['getWeather', 'requestSuggestions'],
           tools: {
             getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
-            }),
+            requestSuggestions,
           },
           onFinish: async ({ response }) => {
             if (session.user?.id) {
@@ -225,12 +211,10 @@ export async function POST(request: Request) {
       },
     });
 
-    // Redis接続がない場合は通常のストリームを返す
     if (!streamContext) {
       return new Response(stream);
     }
 
-    // Redis接続がある場合は履歴付きストリームを返す
     return new Response(
       await streamContext.resumableStream(streamId, () => stream),
     );
@@ -240,7 +224,6 @@ export async function POST(request: Request) {
   }
 }
 
-// GETメソッドを修正
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const chatId = searchParams.get('chatId');
@@ -287,12 +270,10 @@ export async function GET(request: Request) {
     execute: () => {},
   });
 
-  // Redis接続がない場合は通常のストリームを返す
   if (!streamContext) {
     return new Response(emptyDataStream);
   }
 
-  // Redis接続がある場合は履歴付きストリームを返す
   return new Response(
     await streamContext.resumableStream(recentStreamId, () => emptyDataStream),
     {
@@ -306,12 +287,12 @@ export async function DELETE(request: Request) {
   const id = searchParams.get('id');
 
   if (!id) {
-    return new Response('Not Found', { status: 404 });
+    return new Response('id is required', { status: 400 });
   }
 
   const session = await auth();
 
-  if (!session?.user?.id) {
+  if (!session?.user) {
     return new Response('Unauthorized', { status: 401 });
   }
 
@@ -322,12 +303,11 @@ export async function DELETE(request: Request) {
       return new Response('Forbidden', { status: 403 });
     }
 
-    const deletedChat = await deleteChatById({ id });
+    await deleteChatById({ id });
 
-    return Response.json(deletedChat, { status: 200 });
+    return new Response('Chat deleted', { status: 200 });
   } catch (error) {
-    console.error(error);
-    return new Response('An error occurred while processing your request!', {
+    return new Response('An error occurred while processing your request', {
       status: 500,
     });
   }
