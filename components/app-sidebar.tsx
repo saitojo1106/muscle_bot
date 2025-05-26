@@ -81,9 +81,9 @@ export function AppSidebar({ user }: { user: User | undefined }) {
             </SidebarMenu>
             <SidebarUserNav user={user} />
           </>
-        ) : (
+        ) : user ? (
           <SidebarUserNav user={user} />
-        )}
+        ) : null}
       </SidebarFooter>
     </Sidebar>
   );
