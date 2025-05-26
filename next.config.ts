@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
         hostname: 'avatar.vercel.sh',
       },
     ],
+    domains: ['localhost'],
+    formats: ['image/webp', 'image/avif'],
   },
 };
 

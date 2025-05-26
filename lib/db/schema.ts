@@ -176,31 +176,21 @@ export const userProfiles = pgTable('user_profiles', {
   userId: uuid('user_id')
     .references(() => user.id)
     .notNull(),
-
-  // 基本情報
-  gender: varchar('gender', { length: 10 }), // 'male', 'female', 'other'
-  occupation: varchar('occupation', { length: 20 }), // 'student', 'office_worker', 'other'
+  gender: varchar('gender', { length: 10 }),
+  occupation: varchar('occupation', { length: 20 }),
   age: integer('age'),
-  height: integer('height'), // cm
-  weight: decimal('weight', { precision: 5, scale: 2 }), // kg
-
-  // トレーニング情報
-  fitnessLevel: varchar('fitness_level', { length: 20 }), // 'beginner', 'intermediate', 'advanced'
-  goals: text('goals'), // JSON形式で複数の目標を保存
-  trainingFrequency: integer('training_frequency'), // 週何回
-  preferredTrainingTime: varchar('preferred_training_time', { length: 20 }), // 'morning', 'afternoon', 'evening'
-
-  // 食事情報
-  dietaryRestrictions: text('dietary_restrictions'), // アレルギーや食事制限
+  height: integer('height'),
+  weight: decimal('weight', { precision: 5, scale: 2 }),
+  fitnessLevel: varchar('fitness_level', { length: 20 }),
+  goals: text('goals'), // JSON形式
+  trainingFrequency: integer('training_frequency'),
+  preferredTrainingTime: varchar('preferred_training_time', { length: 20 }),
+  dietaryRestrictions: text('dietary_restrictions'),
   dailyCalories: integer('daily_calories'),
-  proteinGoal: decimal('protein_goal', { precision: 5, scale: 2 }), // g
-
-  // 現在の習慣
+  proteinGoal: decimal('protein_goal', { precision: 5, scale: 2 }),
   currentHabits: text('current_habits'), // JSON形式
-  supplements: text('supplements'), // JSON形式
-
-  createdAt: timestamp('created_at').notNull(),
-  updatedAt: timestamp('updated_at').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 export type UserProfile = InferSelectModel<typeof userProfiles>;

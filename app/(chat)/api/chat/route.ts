@@ -139,11 +139,17 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
+    // ユーザープロフィール情報を取得
+    const userProfile = await getUserProfile(session.user.id);
+
+    // プロフィール情報を考慮したシステムプロンプト
+    const personalizedSystemPrompt = generatePersonalizedPrompt(userProfile);
+
     const stream = createDataStream({
       execute: (dataStream) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          system: personalizedSystemPrompt,
           messages,
           maxSteps: 5,
           experimental_activeTools:

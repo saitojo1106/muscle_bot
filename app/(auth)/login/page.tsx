@@ -10,28 +10,51 @@ import { SubmitButton } from '@/components/submit-button';
 
 import { login, type LoginActionState } from '../actions';
 import { useSession } from 'next-auth/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ArrowLeft, X } from 'lucide-react';
+import { useEffect } from 'react';
+
+interface ProfileData {
+  gender?: string;
+  occupation?: string;
+  age?: number;
+  height?: number;
+  weight?: number;
+  fitnessLevel?: string;
+  goals?: string[];
+  trainingFrequency?: number;
+  preferredTrainingTime?: string;
+  dietaryRestrictions?: string;
+  dailyCalories?: number;
+  proteinGoal?: number;
+  currentHabits?: string[];
+}
 
 export default function Page() {
   const router = useRouter();
-
   const [email, setEmail] = useState('');
   const [isSuccessful, setIsSuccessful] = useState(false);
 
   const [state, formAction] = useActionState<LoginActionState, FormData>(
     login,
-    {
-      status: 'idle',
-    },
+    { status: 'idle' },
   );
 
   const { update: updateSession } = useSession();
 
   useEffect(() => {
     if (state.status === 'failed') {
-      toast({
-        type: 'error',
-        description: 'Invalid credentials!',
-      });
+      toast({ type: 'error', description: 'Invalid credentials!' });
     } else if (state.status === 'invalid_data') {
       toast({
         type: 'error',
@@ -42,7 +65,7 @@ export default function Page() {
       updateSession();
       router.refresh();
     }
-  }, [state.status, router, updateSession]); // 依存関係を追加
+  }, [state.status, router, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
     setEmail(formData.get('email') as string);
