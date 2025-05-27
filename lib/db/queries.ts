@@ -520,36 +520,39 @@ export async function getUserProfile(
     const [profile] = await db
       .select()
       .from(userProfiles)
-      .where(eq(userProfiles.userId, userId));
-    return profile || null;
+      .where(eq(userProfiles.userId, userId))
+      .limit(1);
+
+    if (!profile) {
+      return null;
+    }
+
+    // JSON文字列をパースして返す
+    return {
+      ...profile,
+      goals: profile.goals ? JSON.parse(profile.goals) : [],
+      currentHabits: profile.currentHabits
+        ? JSON.parse(profile.currentHabits)
+        : [],
+    };
   } catch (error) {
     console.error('Failed to get user profile:', error);
-    throw error;
+    return null;
   }
 }
 
-export async function saveUserProfile(
-  profile: Partial<NewUserProfile> & { userId: string },
-) {
+export async function saveUserProfile(profile: NewUserProfile): Promise<void> {
   try {
-    const existing = await getUserProfile(profile.userId);
+    // goals と currentHabits を JSON 文字列に変換
+    const profileData = {
+      ...profile,
+      goals: profile.goals ? JSON.stringify(profile.goals) : null,
+      currentHabits: profile.currentHabits
+        ? JSON.stringify(profile.currentHabits)
+        : null,
+    };
 
-    if (existing) {
-      return await db
-        .update(userProfiles)
-        .set({ ...profile, updatedAt: new Date() })
-        .where(eq(userProfiles.userId, profile.userId))
-        .returning();
-    } else {
-      return await db
-        .insert(userProfiles)
-        .values({
-          ...profile,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .returning();
-    }
+    await db.insert(userProfiles).values(profileData);
   } catch (error) {
     console.error('Failed to save user profile:', error);
     throw error;
