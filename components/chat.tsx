@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { ChatHeader } from '@/components/chat-header';
 import type { Vote } from '@/lib/db/schema';
-import { fetcher, generateUUID } from '@/lib/utils';
+import { fetcher } from '@/lib/utils';
 import { MultimodalInput } from './multimodal-input';
 import { Messages } from './messages';
 import type { VisibilityType } from './visibility-selector';
@@ -42,6 +42,8 @@ export function Chat({
     initialVisibilityType,
   });
 
+  const [selectedChatModel] = useState(initialChatModel);
+
   const {
     messages,
     setMessages,
@@ -53,7 +55,6 @@ export function Chat({
     stop,
     reload,
     status,
-    experimental_streamData,
     experimental_resume,
   } = useChat({
     id,
@@ -94,7 +95,6 @@ export function Chat({
         role: 'user',
         content: query,
       });
-
       setHasAppendedQuery(true);
       window.history.replaceState({}, '', `/chat/${id}`);
     }

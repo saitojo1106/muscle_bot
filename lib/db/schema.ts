@@ -174,21 +174,21 @@ export type Stream = InferSelectModel<typeof stream>;
 export const userProfiles = pgTable('user_profiles', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   userId: uuid('user_id')
-    .references(() => user.id)
-    .notNull(),
+    .notNull()
+    .references(() => user.id),
   gender: varchar('gender', { length: 10 }),
   occupation: varchar('occupation', { length: 20 }),
   age: integer('age'),
   height: integer('height'),
   weight: decimal('weight', { precision: 5, scale: 2 }),
   fitnessLevel: varchar('fitness_level', { length: 20 }),
-  goals: text('goals'), // JSON形式
+  goals: text('goals'),
   trainingFrequency: integer('training_frequency'),
   preferredTrainingTime: varchar('preferred_training_time', { length: 20 }),
   dietaryRestrictions: text('dietary_restrictions'),
   dailyCalories: integer('daily_calories'),
   proteinGoal: decimal('protein_goal', { precision: 5, scale: 2 }),
-  currentHabits: text('current_habits'), // JSON形式
+  currentHabits: text('current_habits'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

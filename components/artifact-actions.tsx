@@ -1,10 +1,21 @@
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
-import { artifactDefinitions, UIArtifact } from './artifact';
-import { Dispatch, memo, SetStateAction, useState } from 'react';
-import { ArtifactActionContext } from './create-artifact';
+import type { UIArtifact } from './artifact';
+import { memo, useState, type Dispatch, type SetStateAction } from 'react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+interface ArtifactAction {
+  description: string;
+  icon: React.ReactNode;
+  label?: string;
+  onClick: (context: any) => Promise<void> | void;
+  isDisabled?: (context: any) => boolean;
+}
+
+interface ArtifactDefinition {
+  actions: ArtifactAction[];
+}
 
 interface ArtifactActionsProps {
   artifact: UIArtifact;
@@ -27,27 +38,12 @@ function PureArtifactActions({
 }: ArtifactActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const artifactDefinition = artifactDefinitions.find(
-    (definition) => definition.kind === artifact.kind,
-  );
-
-  if (!artifactDefinition) {
-    throw new Error('Artifact definition not found!');
-  }
-
-  const actionContext: ArtifactActionContext = {
-    content: artifact.content,
-    handleVersionChange,
-    currentVersionIndex,
-    isCurrentVersion,
-    mode,
-    metadata,
-    setMetadata,
-  };
+  // 筋トレアプリでは Artifact 機能を使用しないため、空の配列
+  const artifactDefinition: ArtifactDefinition = { actions: [] };
 
   return (
     <div className="flex flex-row gap-1">
-      {artifactDefinition.actions.map((action) => (
+      {artifactDefinition.actions.map((action: ArtifactAction) => (
         <Tooltip key={action.description}>
           <TooltipTrigger asChild>
             <Button
@@ -58,22 +54,15 @@ function PureArtifactActions({
               })}
               onClick={async () => {
                 setIsLoading(true);
-
                 try {
-                  await Promise.resolve(action.onClick(actionContext));
+                  await Promise.resolve(action.onClick({}));
                 } catch (error) {
                   toast.error('Failed to execute action');
                 } finally {
                   setIsLoading(false);
                 }
               }}
-              disabled={
-                isLoading || artifact.status === 'streaming'
-                  ? true
-                  : action.isDisabled
-                    ? action.isDisabled(actionContext)
-                    : false
-              }
+              disabled={isLoading || artifact.status === 'streaming'}
             >
               {action.icon}
               {action.label}

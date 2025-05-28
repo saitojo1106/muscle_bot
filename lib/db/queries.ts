@@ -42,7 +42,7 @@ import type { VisibilityType } from '@/components/visibility-selector';
 
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!);
-const db = drizzle(client);
+export const db = drizzle(client);
 
 export async function getUser(email: string): Promise<Array<User>> {
   try {
@@ -279,52 +279,22 @@ export async function saveDocument({
   content: string;
   userId: string;
 }) {
-  try {
-    return await db
-      .insert(document)
-      .values({
-        id,
-        title,
-        kind,
-        content,
-        userId,
-        createdAt: new Date(),
-      })
-      .returning();
-  } catch (error) {
-    console.error('Failed to save document in database');
-    throw error;
-  }
+  // 筋トレアプリでは使用しないため、常にエラー
+  return Promise.reject(
+    new Error('Document creation is disabled for fitness app'),
+  );
 }
 
 export async function getDocumentsById({ id }: { id: string }) {
-  try {
-    const documents = await db
-      .select()
-      .from(document)
-      .where(eq(document.id, id))
-      .orderBy(asc(document.createdAt));
-
-    return documents;
-  } catch (error) {
-    console.error('Failed to get document by id from database');
-    throw error;
-  }
+  return Promise.reject(
+    new Error('Document retrieval is disabled for fitness app'),
+  );
 }
 
 export async function getDocumentById({ id }: { id: string }) {
-  try {
-    const [selectedDocument] = await db
-      .select()
-      .from(document)
-      .where(eq(document.id, id))
-      .orderBy(desc(document.createdAt));
-
-    return selectedDocument;
-  } catch (error) {
-    console.error('Failed to get document by id from database');
-    throw error;
-  }
+  return Promise.reject(
+    new Error('Document retrieval is disabled for fitness app'),
+  );
 }
 
 export async function deleteDocumentsByIdAfterTimestamp({
@@ -334,26 +304,9 @@ export async function deleteDocumentsByIdAfterTimestamp({
   id: string;
   timestamp: Date;
 }) {
-  try {
-    await db
-      .delete(suggestion)
-      .where(
-        and(
-          eq(suggestion.documentId, id),
-          gt(suggestion.documentCreatedAt, timestamp),
-        ),
-      );
-
-    return await db
-      .delete(document)
-      .where(and(eq(document.id, id), gt(document.createdAt, timestamp)))
-      .returning();
-  } catch (error) {
-    console.error(
-      'Failed to delete documents by id after timestamp from database',
-    );
-    throw error;
-  }
+  return Promise.reject(
+    new Error('Document deletion is disabled for fitness app'),
+  );
 }
 
 export async function saveSuggestions({
@@ -361,12 +314,7 @@ export async function saveSuggestions({
 }: {
   suggestions: Array<Suggestion>;
 }) {
-  try {
-    return await db.insert(suggestion).values(suggestions);
-  } catch (error) {
-    console.error('Failed to save suggestions in database');
-    throw error;
-  }
+  return Promise.reject(new Error('Suggestions are disabled for fitness app'));
 }
 
 export async function getSuggestionsByDocumentId({
@@ -374,22 +322,16 @@ export async function getSuggestionsByDocumentId({
 }: {
   documentId: string;
 }) {
-  try {
-    return await db
-      .select()
-      .from(suggestion)
-      .where(and(eq(suggestion.documentId, documentId)));
-  } catch (error) {
-    console.error(
-      'Failed to get suggestions by document version from database',
-    );
-    throw error;
-  }
+  return Promise.reject(new Error('Suggestions are disabled for fitness app'));
 }
 
 export async function getMessageById({ id }: { id: string }) {
   try {
-    return await db.select().from(message).where(eq(message.id, id));
+    const [selectedMessage] = await db
+      .select()
+      .from(message)
+      .where(eq(message.id, id));
+    return selectedMessage || null; // 変数名を変更して型競合を回避
   } catch (error) {
     console.error('Failed to get message by id from database');
     throw error;

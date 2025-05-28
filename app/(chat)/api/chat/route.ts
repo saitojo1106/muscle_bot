@@ -2,11 +2,10 @@ import {
   appendClientMessage,
   appendResponseMessages,
   createDataStream,
-  smoothStream,
   streamText,
 } from 'ai';
 import { auth, type UserType } from '@/app/(auth)/auth';
-import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
+import type { RequestHints } from '@/lib/ai/prompts';
 import {
   createStreamId,
   deleteChatById,
@@ -20,7 +19,6 @@ import {
 } from '@/lib/db/queries';
 import { generateUUID, getTrailingMessageId } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '../../actions';
-import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
@@ -141,22 +139,22 @@ export async function POST(request: Request) {
     const userProfile = await getUserProfile(session.user.id);
 
     // プロフィール情報を考慮したシステムプロンプト
-    const personalizedSystemPrompt = generatePersonalizedPrompt(userProfile);
+    const personalizedSystemPrompt = generatePersonalizedPrompt(
+      userProfile || undefined,
+    );
 
     const stream = createDataStream({
       execute: (dataStream) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: personalizedSystemPrompt, // 筋トレ特化プロンプト使用
+          system: personalizedSystemPrompt,
           messages,
           maxSteps: 5,
           experimental_activeTools:
-            selectedChatModel === 'chat-model-reasoning'
-              ? []
-              : ['getWeather', 'requestSuggestions'],
+            selectedChatModel === 'chat-model-reasoning' ? [] : ['getWeather'],
+
           tools: {
-            getWeather,
-            requestSuggestions,
+            getWeather, // createDocument, updateDocument を削除
           },
           onFinish: async ({ response }) => {
             if (session.user?.id) {
