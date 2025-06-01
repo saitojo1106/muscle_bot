@@ -8,16 +8,15 @@ export interface ProfileData {
   height?: number;
   weight?: number;
   fitnessLevel?: 'beginner' | 'intermediate' | 'advanced';
-  goals?: string[];
+  goals?: string | string[]; // 両方に対応
   trainingFrequency?: number;
   preferredTrainingTime?: 'morning' | 'afternoon' | 'evening';
   dietaryRestrictions?: string;
   dailyCalories?: number;
   proteinGoal?: number;
-  currentHabits?: string[];
+  currentHabits?: string | string[]; // 両方に対応
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-// UserProfile型をProfileDataのエイリアスとして定義
 export type UserProfile = ProfileData;

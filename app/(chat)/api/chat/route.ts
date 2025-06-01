@@ -48,17 +48,54 @@ try {
 export async function POST(request: Request) {
   console.log('POST /api/chat - Start');
 
-  let requestBody: PostRequestBody;
-
   try {
     const json = await request.json();
-    console.log('Request body parsed successfully');
+    console.log('Request JSON:', JSON.stringify(json, null, 2));
 
-    requestBody = postRequestBodySchema.parse(json);
-    console.log('Request body validated successfully');
+    // useChat から送信される形式に対応
+    let message;
+    if (
+      json.messages &&
+      Array.isArray(json.messages) &&
+      json.messages.length > 0
+    ) {
+      const lastMessage = json.messages[json.messages.length - 1];
+      message = {
+        id: generateUUID(),
+        role: lastMessage.role,
+        content: lastMessage.content,
+        parts: lastMessage.parts || [
+          { type: 'text', text: lastMessage.content },
+        ],
+        experimental_attachments: lastMessage.experimental_attachments || [],
+      };
+    } else if (json.message) {
+      message = json.message;
+    } else {
+      return new Response(
+        JSON.stringify({
+          error: 'Message or messages array is required',
+          received: Object.keys(json),
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }
 
-    const { id, message, selectedChatModel, selectedVisibilityType } =
-      requestBody;
+    // 正規化されたリクエストボディを作成
+    const normalizedRequestBody = {
+      id: json.id,
+      message,
+      selectedChatModel: json.selectedChatModel,
+      selectedVisibilityType: json.selectedVisibilityType,
+    };
+
+    const requestBody = postRequestBodySchema.parse(normalizedRequestBody);
+    console.log('Validation successful');
+
+    const { id, selectedChatModel, selectedVisibilityType } = requestBody;
 
     const session = await auth();
     console.log('Session:', session ? 'Found' : 'Not found');
@@ -66,6 +103,10 @@ export async function POST(request: Request) {
     if (!session?.user) {
       return new Response('Unauthorized', { status: 401 });
     }
+
+    // ユーザープロフィール情報を取得
+    const userProfile = await getUserProfile(session.user.id);
+    console.log('User Profile:', userProfile);
 
     const userType: UserType = session.user.type;
 
@@ -110,15 +151,7 @@ export async function POST(request: Request) {
       message,
     });
 
-    const { longitude, latitude, city, country } = geolocation(request);
-
-    const requestHints: RequestHints = {
-      longitude,
-      latitude,
-      city,
-      country,
-    };
-
+    // メッセージ保存
     await saveMessages({
       messages: [
         {
@@ -135,13 +168,11 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
-    // ユーザープロフィール情報を取得
-    const userProfile = await getUserProfile(session.user.id);
-
     // プロフィール情報を考慮したシステムプロンプト
     const personalizedSystemPrompt = generatePersonalizedPrompt(
       userProfile || undefined,
     );
+    console.log('Personalized Prompt:', personalizedSystemPrompt);
 
     const stream = createDataStream({
       execute: (dataStream) => {
@@ -154,15 +185,37 @@ export async function POST(request: Request) {
             selectedChatModel === 'chat-model-reasoning' ? [] : ['getWeather'],
 
           tools: {
-            getWeather, // createDocument, updateDocument を削除
+            getWeather,
           },
           onFinish: async ({ response }) => {
             if (session.user?.id) {
               try {
+                // 型エラーを修正：assistantMessagesの型を明示的に変換
+                const assistantMessages = response.messages.filter(
+                  (message) => message.role === 'assistant',
+                );
+
+                // UIMessage形式に変換するために、IDを持つメッセージを作成
+                const assistantUIMessages = assistantMessages.map((msg) => ({
+                  id: generateUUID(), // 新しいIDを生成
+                  role: msg.role,
+                  content: Array.isArray(msg.content)
+                    ? msg.content
+                        .map((part) => {
+                          if (part.type === 'text') {
+                            return part.text;
+                          }
+                          return JSON.stringify(part);
+                        })
+                        .join('')
+                    : msg.content,
+                  parts: Array.isArray(msg.content)
+                    ? msg.content
+                    : [{ type: 'text', text: msg.content }],
+                }));
+
                 const assistantId = getTrailingMessageId({
-                  messages: response.messages.filter(
-                    (message) => message.role === 'assistant',
-                  ),
+                  messages: assistantUIMessages as any, // 型アサーション
                 });
 
                 if (!assistantId) {
@@ -187,7 +240,8 @@ export async function POST(request: Request) {
                     },
                   ],
                 });
-              } catch (_) {
+              } catch (error) {
+                console.error('Failed to save messages in database', error);
                 console.error('Failed to save chat');
               }
             }
@@ -217,8 +271,40 @@ export async function POST(request: Request) {
       await streamContext.resumableStream(streamId, () => stream),
     );
   } catch (error) {
-    console.error('POST /api/chat error:', error);
-    return new Response('Internal Server Error', { status: 500 });
+    console.error('POST /api/chat detailed error:', error);
+
+    // ZodErrorの型安全な処理
+    if (
+      error instanceof Error &&
+      'name' in error &&
+      error.name === 'ZodError'
+    ) {
+      const zodError = error as any;
+      return new Response(
+        JSON.stringify({
+          error: 'Validation failed',
+          details: zodError.issues || [],
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error occurred';
+
+    return new Response(
+      JSON.stringify({
+        error: 'Internal Server Error',
+        message: errorMessage,
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
   }
 }
 

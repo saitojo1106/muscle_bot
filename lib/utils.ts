@@ -1,14 +1,17 @@
+// lib/utils.ts
 import type { CoreAssistantMessage, CoreToolMessage, UIMessage } from 'ai';
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import type { Document } from '@/lib/db/schema';
+import { nanoid } from 'nanoid';
+import { v4 as uuidv4 } from 'uuid'; // ← 正式なUUIDパッケージを使用
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 interface ApplicationError extends Error {
-  info: string;
+  info: any;
   status: number;
 }
 
@@ -31,23 +34,26 @@ export const fetcher = async (url: string) => {
 
 export function getLocalStorage(key: string) {
   if (typeof window !== 'undefined') {
-    return JSON.parse(localStorage.getItem(key) || '[]');
+    return window.localStorage.getItem(key);
   }
-  return [];
+  return null;
 }
 
+// PostgreSQL UUID形式に対応 - 正式なUUID v4を使用
 export function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+  return uuidv4();
 }
 
-type ResponseMessageWithoutId = CoreToolMessage | CoreAssistantMessage;
-type ResponseMessage = ResponseMessageWithoutId & { id: string };
+// メッセージIDやその他の用途では nanoid を使用
+export function generateId(): string {
+  return nanoid();
+}
 
-export function getMostRecentUserMessage(messages: Array<UIMessage>) {
+export function generateRandomString() {
+  return Math.random().toString(36).substring(2, 15);
+}
+
+export function getMostRecentUserMessage(messages: UIMessage[]) {
   const userMessages = messages.filter((message) => message.role === 'user');
   return userMessages.at(-1);
 }
@@ -56,19 +62,14 @@ export function getDocumentTimestampByIndex(
   documents: Array<Document>,
   index: number,
 ) {
-  if (!documents) return new Date();
-  if (index > documents.length) return new Date();
+  if (!documents.length) return new Date();
+  if (index > documents.length - 1) return new Date();
 
   return documents[index].createdAt;
 }
 
-export function getTrailingMessageId({
-  messages,
-}: {
-  messages: Array<ResponseMessage>;
-}): string | null {
+export function getTrailingMessageId({ messages }: { messages: UIMessage[] }) {
   const trailingMessage = messages.at(-1);
-
   if (!trailingMessage) return null;
 
   return trailingMessage.id;

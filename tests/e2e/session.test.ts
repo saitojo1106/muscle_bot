@@ -14,13 +14,14 @@ test.describe
         throw new Error('Failed to load page');
       }
 
-      let request = response.request();
+      let request: any = response.request(); // 型を緩和
 
       const chain = [];
 
       while (request) {
         chain.unshift(request.url());
-        request = request.redirectedFrom();
+        const redirectedFrom = request.redirectedFrom();
+        request = redirectedFrom; // null の可能性を考慮
       }
 
       expect(chain).toEqual([
@@ -56,13 +57,14 @@ test.describe
         throw new Error('Failed to load page');
       }
 
-      let request = response.request();
+      let request: any = response.request(); // 型を緩和
 
       const chain = [];
 
       while (request) {
         chain.unshift(request.url());
-        request = request.redirectedFrom();
+        const redirectedFrom = request.redirectedFrom();
+        request = redirectedFrom; // null の可能性を考慮
       }
 
       expect(chain).toEqual(['http://localhost:3000/']);

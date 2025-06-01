@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,29 +14,48 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from '@/components/toast';
-
-interface ProfileData {
-  gender?: string;
-  occupation?: string;
-  age?: number;
-  height?: number;
-  weight?: number;
-  fitnessLevel?: string;
-  goals?: string[];
-  trainingFrequency?: number;
-  preferredTrainingTime?: string;
-  dietaryRestrictions?: string;
-  dailyCalories?: number;
-  proteinGoal?: number;
-  currentHabits?: string[];
-  supplements?: string[];
-}
+import type { ProfileData } from '@/lib/types/profile';
 
 export default function ProfilePage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [profile, setProfile] = useState<ProfileData>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  // プロフィール読み込み - useEffectを条件付きでない場所に移動
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!session?.user || session.user.type === 'guest') {
+        return; // ログインしていない場合は何もしない
+      }
+
+      try {
+        const response = await fetch('/api/profile');
+        if (response.ok) {
+          const data = await response.json();
+          setProfile(data);
+        }
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+      }
+    };
+
+    loadProfile();
+  }, [session]);
+
+  // Escapeキーでホームに戻る
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        router.push('/');
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [router]);
 
   // ユーザーがログインしていない場合の処理
   if (!session?.user || session.user.type === 'guest') {
@@ -45,6 +65,14 @@ export default function ProfilePage() {
         <p className="text-muted-foreground">
           この機能を利用するにはアカウント登録が必要です。
         </p>
+        <Button
+          onClick={() => router.push('/')}
+          variant="outline"
+          className="mt-4"
+        >
+          <ArrowLeft className="size-4 mr-2" />
+          ホームに戻る
+        </Button>
       </div>
     );
   }
@@ -60,6 +88,8 @@ export default function ProfilePage() {
 
       if (response.ok) {
         toast({ type: 'success', description: 'プロフィールを保存しました！' });
+        // 保存後にホームに戻る
+        setTimeout(() => router.push('/'), 1000);
       } else {
         throw new Error('保存に失敗しました');
       }
@@ -70,9 +100,20 @@ export default function ProfilePage() {
     }
   };
 
+  const handleCancel = () => {
+    router.push('/');
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">プロフィール設定</h1>
+      {/* ヘッダー部分 */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">プロフィール設定</h1>
+        <Button onClick={handleCancel} variant="outline" size="sm">
+          <ArrowLeft className="size-4 mr-2" />
+          戻る
+        </Button>
+      </div>
 
       <div className="space-y-6">
         {/* 基本情報 */}
@@ -84,7 +125,7 @@ export default function ProfilePage() {
               <Label htmlFor="gender">性別</Label>
               <Select
                 value={profile.gender}
-                onValueChange={(value) =>
+                onValueChange={(value: 'male' | 'female' | 'other') =>
                   setProfile((prev) => ({ ...prev, gender: value }))
                 }
               >
@@ -103,7 +144,7 @@ export default function ProfilePage() {
               <Label htmlFor="occupation">職業</Label>
               <Select
                 value={profile.occupation}
-                onValueChange={(value) =>
+                onValueChange={(value: 'student' | 'office_worker' | 'other') =>
                   setProfile((prev) => ({ ...prev, occupation: value }))
                 }
               >
@@ -119,6 +160,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* 年齢、身長、体重 */}
           <div className="grid grid-cols-3 gap-4">
             <div>
               <Label htmlFor="age">年齢</Label>
@@ -179,9 +221,9 @@ export default function ProfilePage() {
             <Label>フィットネスレベル</Label>
             <Select
               value={profile.fitnessLevel}
-              onValueChange={(value) =>
-                setProfile((prev) => ({ ...prev, fitnessLevel: value }))
-              }
+              onValueChange={(
+                value: 'beginner' | 'intermediate' | 'advanced',
+              ) => setProfile((prev) => ({ ...prev, fitnessLevel: value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="選択してください" />
@@ -214,7 +256,7 @@ export default function ProfilePage() {
             <Label>好みのトレーニング時間</Label>
             <Select
               value={profile.preferredTrainingTime}
-              onValueChange={(value) =>
+              onValueChange={(value: 'morning' | 'afternoon' | 'evening') =>
                 setProfile((prev) => ({
                   ...prev,
                   preferredTrainingTime: value,
@@ -230,6 +272,50 @@ export default function ProfilePage() {
                 <SelectItem value="evening">夜（18:00-22:00）</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="goals">筋トレの目標</Label>
+            <Textarea
+              id="goals"
+              value={
+                Array.isArray(profile.goals)
+                  ? profile.goals.join(', ')
+                  : profile.goals || ''
+              }
+              onChange={(e) =>
+                setProfile((prev) => ({
+                  ...prev,
+                  goals: e.target.value
+                    .split(',')
+                    .map((g) => g.trim())
+                    .filter((g) => g.length > 0),
+                }))
+              }
+              placeholder="例：筋力向上、ダイエット、体型改善など（カンマ区切り）"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="current-habits">現在の運動習慣</Label>
+            <Textarea
+              id="current-habits"
+              value={
+                Array.isArray(profile.currentHabits)
+                  ? profile.currentHabits.join(', ')
+                  : profile.currentHabits || ''
+              }
+              onChange={(e) =>
+                setProfile((prev) => ({
+                  ...prev,
+                  currentHabits: e.target.value
+                    .split(',')
+                    .map((h) => h.trim())
+                    .filter((h) => h.length > 0),
+                }))
+              }
+              placeholder="例：週2回ジム通い、毎朝ランニングなど（カンマ区切り）"
+            />
           </div>
         </div>
 
@@ -288,9 +374,15 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <Button onClick={handleSave} disabled={isLoading} className="w-full">
-          {isLoading ? '保存中...' : 'プロフィールを保存'}
-        </Button>
+        {/* ボタン部分 */}
+        <div className="flex gap-4">
+          <Button onClick={handleCancel} variant="outline" className="flex-1">
+            キャンセル
+          </Button>
+          <Button onClick={handleSave} disabled={isLoading} className="flex-1">
+            {isLoading ? '保存中...' : 'プロフィールを保存'}
+          </Button>
+        </div>
       </div>
     </div>
   );
