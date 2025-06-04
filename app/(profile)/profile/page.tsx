@@ -17,28 +17,58 @@ import {
 import { ArrowLeft } from 'lucide-react';
 import { toast } from '@/components/toast';
 import type { ProfileData } from '@/lib/types/profile';
+import type { TrainingDay } from '@/lib/types/training';
+import { TrainingMenu } from '@/components/training-menu';
 
 export default function ProfilePage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileData>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [trainingDays, setTrainingDays] = useState<TrainingDay[]>([]);
 
   // プロフィール読み込み - useEffectを条件付きでない場所に移動
   useEffect(() => {
     const loadProfile = async () => {
       if (!session?.user || session.user.type === 'guest') {
-        return; // ログインしていない場合は何もしない
+        return;
       }
 
       try {
-        const response = await fetch('/api/profile');
-        if (response.ok) {
-          const data = await response.json();
-          setProfile(data);
+        // プロフィール取得
+        const profileResponse = await fetch('/api/profile');
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          setProfile(profileData);
+        }
+
+        // トレーニングメニュー取得
+        const trainingResponse = await fetch('/api/training-menu');
+        if (trainingResponse.ok) {
+          const trainingData = await trainingResponse.json();
+          // データベースから取得したデータをUI用の形式に変換
+          const formattedTrainingDays = (trainingData.trainingDays || []).map(
+            (day: any) => ({
+              id: day.id || crypto.randomUUID(),
+              dayNumber: day.dayNumber,
+              name: day.name || '',
+              isRestDay: day.isRestDay || false,
+              exercises: (day.exercises || []).map((exercise: any) => ({
+                id: exercise.id || crypto.randomUUID(),
+                exerciseName: exercise.exerciseName || '',
+                targetMuscle: exercise.targetMuscle || '',
+                weight: exercise.weight || null,
+                sets: exercise.sets || null,
+                reps: exercise.reps || null,
+                purpose: exercise.purpose || '',
+                order: exercise.order || 0,
+              })),
+            }),
+          );
+          setTrainingDays(formattedTrainingDays);
         }
       } catch (error) {
-        console.error('Failed to load profile:', error);
+        console.error('Failed to load data:', error);
       }
     };
 
@@ -80,20 +110,37 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/profile', {
+      // プロフィール保存
+      const profileResponse = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profile),
       });
 
-      if (response.ok) {
-        toast({ type: 'success', description: 'プロフィールを保存しました！' });
-        // 保存後にホームに戻る
-        setTimeout(() => router.push('/'), 1000);
-      } else {
-        throw new Error('保存に失敗しました');
+      if (!profileResponse.ok) {
+        throw new Error('プロフィール保存に失敗しました');
       }
+
+      // トレーニングメニュー保存
+      if (trainingDays.length > 0) {
+        const trainingResponse = await fetch('/api/training-menu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trainingDays }),
+        });
+
+        if (!trainingResponse.ok) {
+          throw new Error('トレーニングメニュー保存に失敗しました');
+        }
+      }
+
+      toast({
+        type: 'success',
+        description: 'プロフィールとトレーニングメニューを保存しました！',
+      });
+      setTimeout(() => router.push('/'), 1000);
     } catch (error) {
+      console.error('Save error:', error);
       toast({ type: 'error', description: '保存に失敗しました' });
     } finally {
       setIsLoading(false);
@@ -372,6 +419,15 @@ export default function ProfilePage() {
               />
             </div>
           </div>
+        </div>
+
+        {/* トレーニングメニューセクション */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">トレーニングメニュー</h2>
+          <TrainingMenu
+            trainingDays={trainingDays}
+            onUpdate={setTrainingDays}
+          />
         </div>
 
         {/* ボタン部分 */}

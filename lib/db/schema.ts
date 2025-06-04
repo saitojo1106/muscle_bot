@@ -11,6 +11,7 @@ import {
   boolean,
   integer,
   decimal,
+  real,
 } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('User', {
@@ -195,3 +196,43 @@ export const userProfiles = pgTable('user_profiles', {
 
 export type UserProfile = InferSelectModel<typeof userProfiles>;
 export type NewUserProfile = typeof userProfiles.$inferInsert;
+
+// 既存のスキーマの最後に追加
+export const trainingPlans = pgTable('training_plans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const trainingDays = pgTable('training_days', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  planId: uuid('plan_id').references(() => trainingPlans.id, {
+    onDelete: 'cascade',
+  }),
+  dayNumber: integer('day_number').notNull(),
+  name: text('name').notNull(),
+  isRestDay: boolean('is_rest_day').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const trainingExercises = pgTable('training_exercises', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dayId: uuid('day_id').references(() => trainingDays.id, {
+    onDelete: 'cascade',
+  }),
+  exerciseName: text('exercise_name').notNull(),
+  targetMuscle: text('target_muscle').notNull(),
+  weight: real('weight'),
+  sets: integer('sets'),
+  reps: integer('reps'),
+  purpose: text('purpose'),
+  order: integer('order').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export type TrainingPlan = InferSelectModel<typeof trainingPlans>;
+export type TrainingDay = InferSelectModel<typeof trainingDays>;
+export type TrainingExercise = InferSelectModel<typeof trainingExercises>;

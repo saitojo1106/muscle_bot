@@ -108,71 +108,98 @@ export async function POST(request: Request) {
     const userProfile = await getUserProfile(session.user.id);
     console.log('User Profile:', userProfile);
 
-    const userType: UserType = session.user.type;
+    // ユーザーメッセージの内容を取得（言語検出用）
+    const userMessageContent = Array.isArray(message.content)
+      ? message.content
+          .filter(
+            (part: any): part is { type: 'text'; text: string } =>
+              part.type === 'text' && typeof part.text === 'string',
+          )
+          .map((part: { type: 'text'; text: string }) => part.text)
+          .join('')
+      : typeof message.content === 'string'
+        ? message.content
+        : '';
 
-    const messageCount = await getMessageCountByUserId({
-      id: session.user.id,
-      differenceInHours: 24,
-    });
-
-    if (messageCount > entitlementsByUserType[userType].maxMessagesPerDay) {
-      return new Response(
-        'You have exceeded your maximum number of messages for the day! Please try again later.',
+    // トレーニングメニューを取得
+    let trainingMenu = null;
+    try {
+      const trainingResponse = await fetch(
+        `${
+          process.env.NEXTAUTH_URL || 'http://localhost:3000'
+        }/api/training-menu`,
         {
-          status: 429,
+          headers: {
+            Cookie: request.headers.get('Cookie') || '',
+          },
         },
       );
+
+      if (trainingResponse.ok) {
+        const trainingData = await trainingResponse.json();
+        trainingMenu = trainingData.trainingDays || [];
+      }
+    } catch (error) {
+      console.log('Failed to fetch training menu:', error);
     }
 
-    const chat = await getChatById({ id });
+    // プロフィール情報とトレーニングメニューを考慮したシステムプロンプト
+    const personalizedSystemPrompt = generatePersonalizedPrompt(
+      userProfile,
+      userMessageContent,
+      trainingMenu,
+    );
+    console.log('Personalized Prompt:', personalizedSystemPrompt);
 
-    if (!chat) {
-      const title = await generateTitleFromUserMessage({
-        message,
-      });
+    // 既存のメッセージを取得
+    const existingMessages = await getMessagesByChatId({ id });
 
-      await saveChat({
-        id,
-        userId: session.user.id,
-        title,
-        visibility: selectedVisibilityType,
-      });
-    } else {
-      if (chat.userId !== session.user.id) {
-        return new Response('Forbidden', { status: 403 });
+    // チャットが存在しない場合は先に作成
+    if (existingMessages.length === 0) {
+      try {
+        await saveChat({
+          id,
+          userId: session.user.id,
+          title: await generateTitleFromUserMessage({
+            message: userMessageContent,
+          }),
+          visibility: selectedVisibilityType,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      } catch (error) {
+        console.log('Chat already exists or creation failed:', error);
       }
     }
 
-    const previousMessages = await getMessagesByChatId({ id });
+    // メッセージを適切なフォーマットに変換
+    const messages = [
+      ...existingMessages.map((msg) => ({
+        role: msg.role,
+        content: Array.isArray(msg.parts)
+          ? msg.parts
+              .map((part) =>
+                part.type === 'text' ? part.text : JSON.stringify(part),
+              )
+              .join('')
+          : '',
+      })),
+      {
+        role: message.role,
+        content: userMessageContent,
+      },
+    ];
 
-    const messages = appendClientMessage({
-      // @ts-expect-error: todo add type conversion from DBMessage[] to UIMessage[]
-      messages: previousMessages,
-      message,
-    });
-
-    // メッセージ保存
-    await saveMessages({
-      messages: [
-        {
-          chatId: id,
-          id: message.id,
-          role: 'user',
-          parts: message.parts,
-          attachments: message.experimental_attachments ?? [],
-          createdAt: new Date(),
-        },
-      ],
-    });
-
+    // ストリームIDを生成
     const streamId = generateUUID();
-    await createStreamId({ streamId, chatId: id });
 
-    // プロフィール情報を考慮したシステムプロンプト
-    const personalizedSystemPrompt = generatePersonalizedPrompt(
-      userProfile || undefined,
-    );
-    console.log('Personalized Prompt:', personalizedSystemPrompt);
+    // ストリームIDを保存（エラーハンドリング追加）
+    try {
+      await createStreamId({ streamId, chatId: id });
+    } catch (error) {
+      console.error('Failed to create stream id in database:', error);
+      // ストリームIDなしで続行
+    }
 
     const stream = createDataStream({
       execute: (dataStream) => {
@@ -190,14 +217,27 @@ export async function POST(request: Request) {
           onFinish: async ({ response }) => {
             if (session.user?.id) {
               try {
-                // 型エラーを修正：assistantMessagesの型を明示的に変換
+                // ユーザーメッセージを先に保存
+                await saveMessages({
+                  messages: [
+                    {
+                      id: message.id,
+                      chatId: id,
+                      role: message.role,
+                      parts: message.parts,
+                      attachments: message.experimental_attachments ?? [],
+                      createdAt: new Date(),
+                    },
+                  ],
+                });
+
+                // アシスタントメッセージを保存
                 const assistantMessages = response.messages.filter(
                   (message) => message.role === 'assistant',
                 );
 
-                // UIMessage形式に変換するために、IDを持つメッセージを作成
                 const assistantUIMessages = assistantMessages.map((msg) => ({
-                  id: generateUUID(), // 新しいIDを生成
+                  id: generateUUID(),
                   role: msg.role,
                   content: Array.isArray(msg.content)
                     ? msg.content
@@ -215,7 +255,7 @@ export async function POST(request: Request) {
                 }));
 
                 const assistantId = getTrailingMessageId({
-                  messages: assistantUIMessages as any, // 型アサーション
+                  messages: assistantUIMessages as any,
                 });
 
                 if (!assistantId) {
@@ -242,7 +282,6 @@ export async function POST(request: Request) {
                 });
               } catch (error) {
                 console.error('Failed to save messages in database', error);
-                console.error('Failed to save chat');
               }
             }
           },
@@ -267,9 +306,15 @@ export async function POST(request: Request) {
       return new Response(stream);
     }
 
-    return new Response(
-      await streamContext.resumableStream(streamId, () => stream),
-    );
+    // ストリームIDが作成できた場合のみresumableStreamを使用
+    try {
+      return new Response(
+        await streamContext.resumableStream(streamId, () => stream),
+      );
+    } catch (error) {
+      console.error('Resumable stream error:', error);
+      return new Response(stream);
+    }
   } catch (error) {
     console.error('POST /api/chat detailed error:', error);
 
