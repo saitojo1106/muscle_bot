@@ -3,19 +3,18 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useState } from 'react';
-
-import { AuthForm } from '@/components/auth-form';
-import { SubmitButton } from '@/components/submit-button';
-
-import { register, type RegisterActionState } from '../actions';
 import { toast } from '@/components/toast';
 import { useSession } from 'next-auth/react';
 
+import { AuthForm } from '@/components/auth-form';
+import { SubmitButton } from '@/components/submit-button';
+import { register, type RegisterActionState } from '../actions';
+
 export default function Page() {
   const router = useRouter();
-
   const [email, setEmail] = useState('');
   const [isSuccessful, setIsSuccessful] = useState(false);
+  const [hasShownToast, setHasShownToast] = useState(false); // トースト重複防止
 
   const [state, formAction] = useActionState<RegisterActionState, FormData>(
     register,
@@ -27,26 +26,38 @@ export default function Page() {
   const { update: updateSession } = useSession();
 
   useEffect(() => {
+    if (hasShownToast) return; // 既にトーストを表示済みなら何もしない
+
     if (state.status === 'user_exists') {
       toast({ type: 'error', description: 'Account already exists!' });
+      setHasShownToast(true);
     } else if (state.status === 'failed') {
       toast({ type: 'error', description: 'Failed to create account!' });
+      setHasShownToast(true);
     } else if (state.status === 'invalid_data') {
       toast({
         type: 'error',
         description: 'Failed validating your submission!',
       });
+      setHasShownToast(true);
     } else if (state.status === 'success') {
-      toast({ type: 'success', description: 'Account created successfully!' });
-
+      toast({ type: 'success', description: 'アカウントが作成されました！' });
       setIsSuccessful(true);
-      updateSession();
-      router.refresh();
+      setHasShownToast(true);
+
+      // セッション更新後に自動リダイレクト
+      updateSession().then(() => {
+        setTimeout(() => {
+          router.push('/');
+          router.refresh();
+        }, 500); // 少し遅延させてトーストを見せる
+      });
     }
-  }, [state, router, updateSession]); // 依存関係を追加
+  }, [state.status, router, updateSession, hasShownToast]);
 
   const handleSubmit = (formData: FormData) => {
     setEmail(formData.get('email') as string);
+    setHasShownToast(false); // 新しい送信時にリセット
     formAction(formData);
   };
 

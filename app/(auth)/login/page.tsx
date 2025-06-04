@@ -14,6 +14,7 @@ export default function Page() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [isSuccessful, setIsSuccessful] = useState(false);
+  const [hasShownToast, setHasShownToast] = useState(false); // トースト重複防止
 
   const [state, formAction] = useActionState<LoginActionState, FormData>(
     login,
@@ -23,22 +24,35 @@ export default function Page() {
   const { update: updateSession } = useSession();
 
   useEffect(() => {
+    if (hasShownToast) return; // 既にトーストを表示済みなら何もしない
+
     if (state.status === 'failed') {
       toast({ type: 'error', description: 'Invalid credentials!' });
+      setHasShownToast(true);
     } else if (state.status === 'invalid_data') {
       toast({
         type: 'error',
         description: 'Failed validating your submission!',
       });
+      setHasShownToast(true);
     } else if (state.status === 'success') {
+      toast({ type: 'success', description: 'ログインしました！' });
       setIsSuccessful(true);
-      updateSession();
-      router.refresh();
+      setHasShownToast(true);
+
+      // セッション更新後に自動リダイレクト
+      updateSession().then(() => {
+        setTimeout(() => {
+          router.push('/');
+          router.refresh();
+        }, 500); // 少し遅延させてトーストを見せる
+      });
     }
-  }, [state.status, router, updateSession]);
+  }, [state.status, router, updateSession, hasShownToast]);
 
   const handleSubmit = (formData: FormData) => {
     setEmail(formData.get('email') as string);
+    setHasShownToast(false); // 新しい送信時にリセット
     formAction(formData);
   };
 
