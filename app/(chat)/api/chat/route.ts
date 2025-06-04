@@ -164,8 +164,7 @@ export async function POST(request: Request) {
             message: userMessageContent,
           }),
           visibility: selectedVisibilityType,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          // createdAt と updatedAt を削除
         });
       } catch (error) {
         console.log('Chat already exists or creation failed:', error);
