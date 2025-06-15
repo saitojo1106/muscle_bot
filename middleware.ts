@@ -9,7 +9,9 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/login') ||
-    pathname.startsWith('/register')
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/progress') || // プログレス追跡を追加
+    pathname.startsWith('/chat') // チャットページを追加
   ) {
     return NextResponse.next();
   }
@@ -22,11 +24,6 @@ export async function middleware(request: NextRequest) {
   // 未認証ユーザーがトップページにアクセスした場合は自動ゲスト認証
   if (!session?.user && pathname === '/') {
     return NextResponse.redirect(new URL('/api/auth/guest', request.url));
-  }
-
-  // その他の保護されたページへのアクセス
-  if (!session?.user) {
-    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   return NextResponse.next();
