@@ -258,8 +258,15 @@ export const ThinkingMessage = () => {
     <motion.div
       data-testid="message-assistant-loading"
       className="w-full mx-auto max-w-3xl px-4 group/message min-h-96"
-      initial={{ y: 5, opacity: 0 }}
-      animate={{ y: 0, opacity: 1, transition: { delay: 1 } }}
+      initial={{ y: 10, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{
+        type: 'spring',
+        stiffness: 500,
+        damping: 30,
+        duration: 0.5,
+        delay: 0.2,
+      }}
       data-role={role}
     >
       <div
