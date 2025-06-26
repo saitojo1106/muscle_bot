@@ -8,6 +8,8 @@ import { AuthForm } from '@/components/auth-form';
 import { SubmitButton } from '@/components/submit-button';
 import { login, type LoginActionState } from '../actions';
 
+export const dynamic = 'force-dynamic';
+
 export default function Page() {
   const searchParams = useSearchParams();
   const [isSuccessful, setIsSuccessful] = useState(false);
