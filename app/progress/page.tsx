@@ -132,7 +132,7 @@ export default function ProgressPage() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <Button
-                    variant="dashed"
+                    variant="outline"
                     className="h-48 border-2 border-dashed border-gray-300 dark:border-gray-600"
                   >
                     <div className="flex flex-col items-center">
