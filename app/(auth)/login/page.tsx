@@ -19,7 +19,7 @@ export default function Page() {
   );
 
   useEffect(() => {
-    if (state.status === 'error') {
+    if (state.status === 'failed') {
       toast({ type: 'error', description: 'Incorrect email or password' });
     } else if (state.status === 'success') {
       toast({ type: 'success', description: 'Signed in successfully' });
