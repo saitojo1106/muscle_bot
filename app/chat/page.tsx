@@ -8,8 +8,11 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
+import { useSession } from 'next-auth/react';
+
 export default function ChatPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [chatId, setChatId] = useState<string>('');
 
   useEffect(() => {
@@ -17,7 +20,7 @@ export default function ChatPage() {
     setChatId(id);
   }, []);
 
-  if (!chatId) {
+  if (!chatId || !session) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-lg">Loading...</div>
@@ -46,9 +49,11 @@ export default function ChatPage() {
         <Chat
           id={chatId}
           initialMessages={[]}
-          selectedModelId="chat-model"
-          selectedVisibilityType="private"
+          initialChatModel="chat-model"
+          initialVisibilityType="private"
           isReadonly={false}
+          session={session}
+          autoResume={false}
         />
       </div>
     </div>
