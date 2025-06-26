@@ -1,13 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import Link from 'next/link';
 import { useActionState, useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from '@/components/toast';
 import { AuthForm } from '@/components/auth-form';
 import { SubmitButton } from '@/components/submit-button';
 import { login, type LoginActionState } from '../actions';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
